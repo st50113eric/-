@@ -11,12 +11,13 @@ import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+
 import java.io.*;
 import java.util.*;
 import java.util.NoSuchElementException;
 
-public class selenium_1_version {	
-    public static WebDriver driver;
+public class selenium_2_version {          
+	public static WebDriver driver;
     public static boolean acceptNextAlert = true;
     
     //Change the string of content frequently use it, And does not generate new unused objects
@@ -24,20 +25,22 @@ public class selenium_1_version {
     
     //The annotated method will be run before the first test method in the current class is invoked.    
     @BeforeClass(alwaysRun = true)  
+    //if have any exception, give external handle
     public void setUp() throws Exception {  
 	    driver = new ChromeDriver();
 	    System.setProperty("webdriver.chrome.driver","chromedriver.exe");
-	    
-	    //This wait usually applies to the preset wait for the entire program    
+	    //This wait usually applies to the preset wait for the entire program
 	    driver.manage().timeouts().implicitlyWait(30, TimeUnit.SECONDS);  
-	}    
+	} 
+
     @Test 
     public void testselenium_1_version() throws Exception {
     	
-    	//connect config.properties 	
+    	//connect config.properties
     	InputStream is = selenium_1_version.class.getResourceAsStream("/config.properties");
 		Properties properties = new Properties();
-		properties.load(is);	
+		properties.load(is);
+		is.close();	
 		String failUpTest = properties.getProperty("failUpTest");
 		String URL = properties.getProperty("URL");
 		String unitRetryCount = properties.getProperty("unitRetryCount");
@@ -59,108 +62,52 @@ public class selenium_1_version {
 		boolean isVerifyOpen = false;
 		boolean isVersionCompare = false;	
 		
-		//fail up test count		
+		//fail up test count
 		for(int k=1 ; k<=failUpTestInt ; k++) {
 			System.out.println("Opening the chrome browser...");
 			System.out.println(URL);
-			driver.get(URL);	  
+			driver.get(URL);
 			WebElement beforeLogin =driver.findElement(By.id("content"));		
-		    int statusLogin = 0;
-				for( int i = 1 ; i<=unitRetryCountInt ; i++) {	
-				    String beforeLoginElement = beforeLogin.getText();
-					if(beforeLoginElement.equals("Authorization Required")) {	
-						isBrowserOpen= true;
-						statusLogin = 1;
-						break;	
-					}		
-					else{
-						System.out.println("check");
-						statusLogin = 2;
-						TimeUnit.SECONDS.sleep(1); 
-					}		
-				}
-			switch(statusLogin) {
-		    		case 1 :
-		    			System.out.println("Login screen is loaded successfully");
-		    			break;
-		    		case 2 :
-		    			continue;
-		    }
-			
-			driver.findElement(By.name("luci_username")).click();		    
-		    //clean the textbox	    
-			driver.findElement(By.name("luci_username")).clear();   
+			String beforeLoginString = beforeLogin.getText();
+			boolean checkFail= unitRetry("Authorization Required","Login screen is loaded successfully",beforeLoginString,isBrowserOpen);
+			if(checkFail==false) {
+				continue;
+			}
+
+		    driver.findElement(By.name("luci_username")).click();
+			driver.findElement(By.name("luci_username")).clear();
+			//clean the textbox
 		    driver.findElement(By.name("luci_username")).sendKeys(account);
 			driver.findElement(By.name("luci_password")).clear();
 			driver.findElement(By.name("luci_password")).sendKeys(psd);
 			driver.findElement(By.xpath("//input[@value='Login']")).click();
-			
-			//Catch current raw html and jsoup need this code		
-			Document statusPage = Jsoup.parse(driver.getPageSource());     
+			Document statusPage = Jsoup.parse(driver.getPageSource());      //current raw html and jsoup need this code
 			Element firmwareVers = statusPage.select("fieldset").select("table").first().select("tr").get(2);					
 			String firmwareVerion=firmwareVers.select("td").get(0).text();
-			String firmwareVersionDecision = firmwareVers.select("td").get(1).text();		
-			int statusStatus = 0;
-			for ( int i = 1 ; i<=unitRetryCountInt ; i++) { 
-			    if(firmwareVerion.equals("Firmware Version")) { 
-			    	isStatusOpen = true; 
-			    	statusStatus=1;
-			    	break; 
-			    } 
-			    else{
-					System.out.println("check");
-					statusStatus=2;
-					TimeUnit.SECONDS.sleep(1); 
-			    }
+			String firstVersionDecision = firmwareVers.select("td").get(1).text();		
+			
+						
+			boolean checkFailFirmware= unitRetry("Firmware Version","Status page is loaded successfully",firmwareVerion,isStatusOpen);
+			if(checkFailFirmware==false) {
+				continue;
 			}
-			switch(statusStatus) {
-		    	case 1 :
-		    		System.out.println("Status page is loaded successfully");
-		    		break;
-		    	case 2 :
-		    		continue;
-	        }
-			
-			//get the current version and compare it at last		
-			System.out.println("Firmware Version" + ":" + firmwareVersionDecision);
-			String testCorrectVersion=firmwareVersionDecision.substring(firmwareVersionDecision.length()-13,firmwareVersionDecision.length()-1);		
-			
-			//SON->Topology			
+			System.out.println("Firmware Version" + ":" + firstVersionDecision);
+			String testCorrectVersion=firstVersionDecision.substring(firstVersionDecision.length()-13,firstVersionDecision.length()-1);
+		    
+			//SON->Topology
 			driver.findElement(By.linkText("SON")).click();
 			driver.findElement(By.linkText("Topology")).click();									
 			Document topologyPage = Jsoup.parse(driver.getPageSource());
 			Elements topologyAbove = topologyPage.select("#content");
 			String topologyTitle = topologyAbove.text();			
-			int statusTopology=0;
-		    for ( int i = 1 ; i<=unitRetryCountInt ; i++) { 
-			    if(topologyTitle.equals("Topology")) { 
-			    	isTopologyOpen = true;
-			    	statusTopology=1;
-			    	break; 
-			    } 
-			    else{
-			    	System.out.println("check");
-			    	statusTopology=2;
-			    	TimeUnit.SECONDS.sleep(1); 
-			    }
-		     }
-		    switch(statusTopology) {
-				case 1 :
-					System.out.println("Topology page is loaded successfully");
-					break;
-				case 2 :
-					continue;
-	        }
-		    
-		    //buffer of the print activeAP time		    
-		    TimeUnit.SECONDS.sleep(2); 
-		    
-		    //print all device information from SON->Topology
-		    //announce list  		    
-		    System.out.println("Finding ActiveAP...");
+			boolean checkFailTopology= unitRetry("Topology","Topology page is loaded successfully",topologyTitle,isTopologyOpen);
+			if(checkFailTopology==false) {
+				continue;
+			}
+		    TimeUnit.SECONDS.sleep(3); 
 		    ArrayList<String> topologyArray = new ArrayList<String>();
-		    for (int i=1; i>=1; i++) {
-		    	
+		    System.out.println("Finding ActiveAP...");
+            for (int i=1; i>=1; i++) {         	
 		    	//find the last element check if it is exist
 		    	WebElement activeAPLast = driver.findElement(By.xpath("//*[@id=\"active-ap-lst\"]/tbody/tr["+(APNumberInt+1)+"]"));
 		    	boolean status= activeAPLast.isDisplayed();
@@ -180,29 +127,26 @@ public class selenium_1_version {
 		    	}
 		    	else {
 		    		driver.navigate().refresh();
-		    	}	    	        	
-//		       if(i==3) {
-//		    	   selenium_1_version.checkBackHaul();  
-//		       }	    	    
+		    	}	    	        		    	    
 		        if(i==5) {
 		        	fail("No finding activeAPs");
 		        }
 		        TimeUnit.SECONDS.sleep(1);		    	
 	    	 }
-		    
-// JavaScript scrollIntoView() Method scrolls the scroll bar to the specified element position of the page		    
-//	        WebElement activeAPTopic = driver.findElement(By.xpath("//table[@id='active-ap-lst']//tr[@class='cbi-section-table-row cbi-rowstyle-2']//td[@class='cbi-value-field']"));
-//	 		((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView();", activeAPTopic);
+	        
+//	        WebElement activeAP_topic = driver.findElement(By.xpath("//table[@id='active-ap-lst']//tr[@class='cbi-section-table-row cbi-rowstyle-2']//td[@class='cbi-value-field']"));
+//	 		// JavaScript scrollIntoView() Method scrolls the scroll bar to the specified element position of the page
+//	 		((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView();", activeAP_topic);
 //	 		try {
 //	 			Thread.sleep(3000);
-//	 		}catch (InterruptedException e) { 
-//	 		    e.printStackTrace();
-//	 		}
+//	 		} catch (InterruptedException e) { 
+//	 		      e.printStackTrace();
+//	 		  }
 //		 	driver.manage().window().maximize();		
 //		    File srcFile = ((TakesScreenshot)driver).getScreenshotAs(OutputType.FILE);
 //		    FileUtils.copyFile(srcFile,  new File("screenshot.png"));	  
-
-		    //First, waiting for black screen and firmware update 	 				    
+		    
+            //SON->Firmware
 		    driver.findElement(By.linkText("SON")).click();
 		    driver.findElement(By.linkText("Firmware")).click();
 		    WebElement message = driver.findElement(By.xpath("//*[@id=\"holdon-message\"]"));	
@@ -210,20 +154,15 @@ public class selenium_1_version {
 			System.out.println("Black screen is setting : " + messageDecision);
 			System.out.println("Start finding AP...");
 			System.out.println("-----------------------------------------------");
-//			Document firmwarePage = Jsoup.parse(driver.getPageSource());
-			
-			//announce list to save the key of the dictionary
 			Hashtable<String, String> dict = new Hashtable<String, String>();
-	    	ArrayList<String> strList = new ArrayList<String>();
+	    	ArrayList<String> strArray = new ArrayList<String>();
 			for (int i=1; i>=1; i++) { 
 		    	WebElement firmwareAP = driver.findElement(By.xpath("//*[@id=\"ap-version-lst\"]/tbody"));
 		        String firmwareAPDecision = firmwareAP.getText();
 		    	System.out.println("Check number "+ i + ":\n" + firmwareAPDecision);
-		        CharSequence cs = "LM01";		   
-		        if(firmwareAPDecision.contains(cs)) {
-		        	try {
-		        		
-		        		//find the element until the set up APNumber
+		        CharSequence cs1 = "LM01";		   
+		        if(firmwareAPDecision.contains(cs1)) {
+		        	try {	        			        		
 				    	WebDriverWait wait = new WebDriverWait(driver, 10);  	 
 				    	WebElement AP = wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//*[@id=\"ap-version-lst\"]/tbody/tr["+(APNumberInt+1)+"]/td[2]")));			    
 				    	boolean statusDecision = AP.isDisplayed();
@@ -234,41 +173,38 @@ public class selenium_1_version {
 				  	        	    WebElement APVer = driver.findElement(By.xpath("//*[@id=\"ap-version-lst\"]/tbody/tr["+ j +"]/td[3]"));       	
 				  	        	    String APMacAddress = APMac.getText();
 				  	        	    String APVersion = APVer.getText();
-				  	        	    
-				  	        	    //announce list to save the key of the dictionary				  	        	   
-				  	        	    strList.add(APMacAddress);		  	        	
+						    		strArray.add(APMacAddress);		  	        	
 				  	        	    dict.put(APMacAddress,APVersion); 
 					    		}			    					    		
 				    	}				    	
 				    }catch(Exception e) {
-				    	System.out.println("Not correspond, keep finding AP...");
+				    	System.out.println("Keep finding AP...");
 				    }finally {
-				    	if(strList.size()==APNumberInt) {				    
+				    	if(strArray.size()==APNumberInt) {
+				    
 				    		 break;		        	        
 			        	 }
 		        	     else {
-		        	    	strList.clear();
-		        	    	dict.clear();
+	        	        	dict.clear();
+	        	        	strArray.clear();
 	        	        	driver.navigate().refresh(); 
 		                }  
 			        }			   
-	           }
-	           if(isAlertPresent()){
-		    	   assertEquals(closeAlertAndGetItsText(), "WARNING : You will be redirected to the next page, please make sure you upload the correct firmware. Your current settings will be erased after flashing firmware.");
-		       }
-		       if(i==60) {
+	           }		        	
+		       else if(i==60) {
 		           driver.navigate().refresh();  
 		       }
-		       if(i==80) {
+		       else if(i==100) {
 		        	fail("No finding APs");
 		       }
 		       TimeUnit.SECONDS.sleep(1);		    	
-	    	}
-			System.out.println("The Firmware page is loaded successfully");			
+	    	}	    		         		 
+		    System.out.println("The Firmware page is loaded successfully");
+		 								
 //		    int repeat=0;
 //			    do {
-			
-			//document auto updating			
+		    
+		    //document auto updating
 		    File filePrevious = new File(strPrevious);	 
 		    File fileAfter = new File(strAfter);				      
 		    String currentVerionCompare = testCorrectVersion +".img";	
@@ -278,9 +214,7 @@ public class selenium_1_version {
 		    }
 		    else if(currentVerionCompare.equals(fileAfter.getName())) {   		
 		       	    uploadElement.sendKeys(strPrevious);
-		    }
-		    
-		    //check keep setting box	    
+		    }	       	 
 	        switch(keepSettingInt) {
 	           case 1 :
 	        	   if(!driver.findElement(By.id("keep")).isSelected()){
@@ -289,7 +223,6 @@ public class selenium_1_version {
 	        	   }else {
 	        		   System.out.println("Keep setting box is checked");
 	        	   }
-	        	   TimeUnit.SECONDS.sleep(1);
 	        	   break;
 	           case 2 :
 	        	   if(driver.findElement(By.id("keep")).isSelected()){
@@ -298,12 +231,11 @@ public class selenium_1_version {
 	        	   }else{
 	        		   System.out.println("Keep setting box is unchecked"); 
 	        	   }
-	        	   TimeUnit.SECONDS.sleep(1);
 	        	   break;
 	        }
-	        
-	        //check check_all box        
 	        TimeUnit.SECONDS.sleep(2);
+	        
+		    //check keep setting box	    
 	        switch(selectAllInt) {
 	           case 1 :
 	        	   if(!driver.findElement(By.id("check_all")).isSelected()){
@@ -321,36 +253,21 @@ public class selenium_1_version {
 	        		   System.out.println("Select all box is unchecked"); 
 	        	   }
 	        	   break;
-	        }
-	        
-	        //press firmware update and procced	        
+	        }		     
 	        driver.findElement(By.xpath("(.//*[normalize-space(text()) and normalize-space(.)='Other Image:'])[1]/following::input[2]")).click();
 	        assertEquals(closeAlertAndGetItsText(), "WARNING : You will be redirected to the next page, please make sure you upload the correct firmware. Your current settings will be erased after flashing firmware.");
 	        System.out.println("Uploading image...");
 	        Document firmwareUpdatePage = Jsoup.parse(driver.getPageSource());
 	        Elements verify = firmwareUpdatePage.select("#content");
 		    String firmwareVerify = verify.text();
-		    int f_1=0;
-		    for ( int i = 1 ; i<=unitRetryCountInt ; i++) {	
-			   if(firmwareVerify.equals("Flash Firmware - Verify")) {	
-				   isVerifyOpen= true;	  			
-				   break;	
-			  }		
-			   else{
-				   System.out.println("check");
-				   TimeUnit.SECONDS.sleep(2);		
-			   }
+		    boolean checkFailVerify= unitRetry("Flash Firmware - Verify","Verify page is loaded successfully.",firmwareVerify,isVerifyOpen);
+			if(checkFailVerify==false) {
+				continue;
 			}
-		    switch(f_1) {
-		       case 1 :
-		    	   System.out.println("Verify page is loaded successfully.");
-		    	   break;
-		       case 2 :
-			       continue;
-	        }         
+		   
 		    driver.findElement(By.xpath("//input[@value='Proceed']")).click();
 		    
-		 	//Wait for FW upgrade	    
+		 	//Wait for FW upgrade
 		    int aboveCount = 0;
 	        while(true) { 		    
 			    try {	
@@ -358,8 +275,6 @@ public class selenium_1_version {
 			    	System.out.println("Page refreshing...");    	
 			    	aboveCount++;
 			    	driver.navigate().refresh(); 
-			    	
-			    	//until find the account input textbox
 			    	WebElement SearchText = wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//*[@id=\"mainbody\"]/fieldset/fieldset/div[1]/div/input")));			    
 			    	boolean status = SearchText.isDisplayed();
 			    	if(status) {
@@ -375,19 +290,18 @@ public class selenium_1_version {
 			     }				   
 	        }
 	        
-	        //login again        
+	        //login again
 	        driver.findElement(By.name("luci_username")).click();
 			driver.findElement(By.name("luci_username")).clear();                        
 		    driver.findElement(By.name("luci_username")).sendKeys(account);
 			driver.findElement(By.name("luci_password")).clear();
 			driver.findElement(By.name("luci_password")).sendKeys(psd);
 			driver.findElement(By.xpath("//input[@value='Login']")).click();
-			
-			//goto status page to check correct version		
-			Document loginPage2 = Jsoup.parse(driver.getPageSource());     
+			Document loginPage2 = Jsoup.parse(driver.getPageSource());      //current raw html and jsoup need this code
 			Element firmwareVers2 = loginPage2.select("fieldset").select("table").first().select("tr").get(2); 	
 			String firmwareVersion2 = firmwareVers2.select("td").get(0).text();
 			String firmwareVersionDecision2 = firmwareVers2.select("td").get(1).text();			
+			int statusStatus = 0;
 			for ( int i = 1 ; i<=unitRetryCountInt ; i++) { 
 			    if(firmwareVersion2.equals("Firmware Version")) { 
 			    	isStatusOpen = true; 
@@ -406,14 +320,10 @@ public class selenium_1_version {
 		    		break;
 		    	case 2 :
 		    		continue;
-	        }
-			
-			//currrent correct version 
+	        }				
 		    System.out.println("Firmware Version" +":"+ firmwareVersionDecision2);
 			String testCorrectVersion2=firmwareVersionDecision2.substring(firmwareVersionDecision2.length()-13,firmwareVersionDecision2.length()-1);			    
-		    
-			//goto SON->Topology and find the check version, the black screen again will still run and check		
-     		driver.findElement(By.linkText("SON")).click();
+		    driver.findElement(By.linkText("SON")).click();
 		    driver.findElement(By.linkText("Firmware")).click();
 		    WebElement message2 = driver.findElement(By.xpath("//*[@id=\"holdon-message\"]"));	
 			String messageDecision2 = message2.getText();   
@@ -426,9 +336,9 @@ public class selenium_1_version {
 		    	WebElement all_AP2 = driver.findElement(By.xpath("//*[@id=\"ap-version-lst\"]/tbody"));
 		        String allAPDecision2 = all_AP2.getText();
 		    	System.out.println(allAPDecision2);
-		        CharSequence cs = "LM01";
+		        CharSequence cs1 = "LM01";
 		        System.out.println(i);
-		        if(allAPDecision2.contains(cs)) {		        	
+		        if(allAPDecision2.contains(cs1)) {		        	
 		        	System.out.println("AP is found");
 				    	try {
 				    		WebDriverWait wait = new WebDriverWait(driver, 10);
@@ -460,23 +370,19 @@ public class selenium_1_version {
 				            } 
 				        }			         
 			   }
-		       if(isAlertPresent()){
+		       else if(isAlertPresent()){
 		    	   assertEquals(closeAlertAndGetItsText(), "WARNING : You will be redirected to the next page, please make sure you upload the correct firmware. Your current settings will be erased after flashing firmware.");
 		       }
-		       if(i==60) {
+		       else if(i==70) {
 		           driver.navigate().refresh();  
 		       }
-		       if(i==80) {
+		       else if(i==100) {
 		        	fail("No finding APs");
 		       }
 		       TimeUnit.SECONDS.sleep(1);		    	   	
 			}
-			
-			//Using the current version to start to check each AP 		
-			TimeUnit.SECONDS.sleep(3);
+			TimeUnit.SECONDS.sleep(5);
 			for(int i=0 ; i<=(APNumberInt-1) ;i++) {
-				
-				//every AP find key to correspond value
 			    if(dict2.get(strArray2.get(i)).equals(testCorrectVersion2)) {
 			    	isVersionCompare = true;
 			    	System.out.println(strArray2.get(i)+"version is correct");					    	
@@ -485,21 +391,20 @@ public class selenium_1_version {
 			    	isVersionCompare = false;
 			    	System.out.println(strArray2.get(i)+dict2.get(strArray2.get(i))+" is version error");					    	
 			    }
-		    } 
-		break;		
-		}
-		
-		//fail test determine
-	    assertTrue(isBrowserOpen,"Finish retrying user's setting counts, and can't find the element of \"Authorization Required\".");
-	    assertTrue(isStatusOpen,"Finish retrying user's setting counts, and can't find the element of \"Firmware Version\"."); 
-        assertTrue(isTopologyOpen,"Finish retrying user's setting counts, and can't find the element of \"Topology\".");
-        assertTrue(isVerifyOpen,"Finish retrying user's setting counts, and can't find the element of \"Flash Firmware - Verify\".");
-        assertTrue(isVersionCompare,"Update fail!!");
-        System.out.println("Finish testing");
-        
-        //Quits the driver and closes every associated window. 
-        driver.quit();
+		    }
+//			    repeat++;
+//		     }while ( repeat <=1 );	 
+	break;		
 	}
+    assertTrue(isBrowserOpen,"Finish retrying user's setting counts, and can't find the element of \"Authorization Required\".");
+    assertTrue(isStatusOpen,"Finish retrying user's setting counts, and can't find the element of \"Firmware Version\"."); 
+    assertTrue(isTopologyOpen,"Finish retrying user's setting counts, and can't find the element of \"Topology\".");
+    assertTrue(isVerifyOpen,"Finish retrying user's setting counts, and can't find the element of \"Flash Firmware - Verify\".");
+    assertTrue(isVersionCompare,"Update fail!!");
+    System.out.println("Finish testing");
+    //Quits the driver and closes every associated window. 
+    driver.quit();
+}
 
     @AfterClass(alwaysRun = true)
     public void tearDown() throws Exception {
@@ -508,35 +413,7 @@ public class selenium_1_version {
 	    	fail(verificationErrorString);
 	    }
     }
-    
-//check backhaul    
-//    public static void checkBackHaul() throws Exception {			
-//    	InputStream is = selenium_1_version.class.getResourceAsStream("/config.properties");
-//		Properties properties = new Properties();
-//		properties.load(is);
-//		String APbackhaul = properties.getProperty("APbackhaul");
-//		is.close();	
-//		driver.findElement(By.linkText("SON")).click();
-//	    driver.findElement(By.linkText("Configuration")).click();
-//	    driver.findElement(By.linkText("Advanced Settings")).click();		    
-//	    String backhaul = driver.findElement(By.id("cbid.wnc-son.backhaul.ssid")).getAttribute("value");
-//		if(!backhaul.equals(APbackhaul)) {
-//		driver.findElement(By.id("cbid.wnc-son.backhaul.ssid")).clear();
-//		driver.findElement(By.id("cbid.wnc-son.backhaul.ssid")).sendKeys(APbackhaul);
-//		driver.findElement(By.name("cbi.apply")).click();
-//		System.out.println("Waiting the settings...");
-//			if(isAlertPresent()){
-//		    	   assertEquals(closeAlertAndGetItsText(), "WARNING : It may take several minutes to re-establish the SON topology. Please wait patiently.");
-//		    }
-//		TimeUnit.SECONDS.sleep(13);
-//		driver.findElement(By.linkText("SON")).click();
-//		driver.findElement(By.linkText("Topology")).click();
-//		TimeUnit.SECONDS.sleep(1);
-//		}
-//    }
-    
-    //while encounter the alert, press accept 
-    public static String closeAlertAndGetItsText() {
+    public String closeAlertAndGetItsText() {
     	try {
     		Alert alert = driver.switchTo().alert();
     		String alertText = alert.getText();
@@ -549,10 +426,29 @@ public class selenium_1_version {
     			} finally {
     				acceptNextAlert = true;
     			}
-   }
-    
-    //Determine if an element exists 
-    public boolean isElementPresent(By by) { 
+    }
+    public static boolean unitRetry(String Webtext, String loadInformation,String catchText ,boolean Exist) throws Exception {
+		InputStream is = selenium_2_version.class.getResourceAsStream("/config.properties");
+		Properties properties = new Properties();
+		properties.load(is);
+		is.close();
+		String unitRetryCount = properties.getProperty("unitRetryCount");
+		int unitRetryCountInt = Integer.valueOf(unitRetryCount.trim());				
+		for ( int j = 1 ; j<=unitRetryCountInt ; j++) { 
+			if(catchText.equals(Webtext)) { 
+				Exist= true;
+				System.out.println(loadInformation);
+				break; 
+			} 
+			else{
+				System.out.println("check");
+				TimeUnit.SECONDS.sleep(1); 
+			} 
+		}	  
+		return Exist;
+	}
+
+    public boolean isElementPresent(By by) { //Determine if an element exists
     try {
     	driver.findElement(by);
     	return true;
@@ -560,9 +456,7 @@ public class selenium_1_version {
     		return false;
     	}
     }
-    
-    //Determine if Alert exists   
-    public static boolean isAlertPresent() {       
+    public boolean isAlertPresent() {        //Determine if Alert exists
     	try {
     		driver.switchTo().alert();           
     		return true;
