@@ -1,2 +1,2 @@
-# WNC ATS
+# WNC
 
